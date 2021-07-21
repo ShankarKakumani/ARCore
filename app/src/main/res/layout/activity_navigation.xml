@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".activity.Navigation">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        >
+
+        <Button
+            android:id="@+id/scene_form"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="SceneForm"
+            android:onClick="onItemClick"
+            android:layout_margin="2dp"
+            />
+        <Button
+            android:id="@+id/ar_core"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="ARCore"
+            android:onClick="onItemClick"
+            android:layout_margin="2dp"
+            />
+
+        <Button
+            android:id="@+id/ar_core_two"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="AC2"
+            android:onClick="onItemClick"
+            android:layout_margin="2dp"
+            />
+    </LinearLayout>
+
+
+
+</RelativeLayout>
