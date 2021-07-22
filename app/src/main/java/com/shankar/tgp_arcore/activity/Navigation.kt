@@ -25,7 +25,7 @@ class Navigation : AppCompatActivity() {
             }
 
             R.id.ar_core_two -> {
-                Intent(this, TwoD::class.java)
+                Intent(this, FilamentActivity::class.java)
 
             }
             else -> {

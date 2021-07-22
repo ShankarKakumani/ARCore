@@ -3,6 +3,7 @@ package com.shankar.tgp_arcore.activity
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -11,22 +12,20 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentOnAttachListener
 import com.google.android.filament.ColorGrading
 import com.google.ar.core.*
-import com.google.ar.sceneform.AnchorNode
-import com.google.ar.sceneform.ArSceneView
-import com.google.ar.sceneform.SceneView
-import com.google.ar.sceneform.Sceneform
+import com.google.ar.sceneform.*
+import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.EngineInstance
-import com.google.ar.sceneform.rendering.FixedHeightViewSizer
+import com.google.ar.sceneform.rendering.PlaneRenderer
+import com.google.ar.sceneform.rendering.Texture
 import com.google.ar.sceneform.rendering.ViewRenderable
-import com.google.ar.sceneform.rendering.ViewSizer
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.BaseArFragment
-import com.google.ar.sceneform.ux.TransformableNode
 import com.shankar.tgp_arcore.R
 import com.shankar.tgp_arcore.databinding.ActivitySceneFormBinding
 import com.squareup.picasso.Callback
 import com.squareup.picasso.Picasso
-import java.lang.Exception
+import java.util.concurrent.CompletableFuture
+
 
 class SceneForm : AppCompatActivity(), FragmentOnAttachListener,
     BaseArFragment.OnTapArPlaneListener,
@@ -34,13 +33,17 @@ class SceneForm : AppCompatActivity(), FragmentOnAttachListener,
     ArFragment.OnViewCreatedListener {
 
     private lateinit var arFragment: ArFragment
-    private var viewRenderable: ViewRenderable? = null
+    private var artRenderable: ViewRenderable? = null
 
     private lateinit var binding: ActivitySceneFormBinding
 
     private lateinit var anchor: Anchor
     private lateinit var anchorNode: AnchorNode
+    private lateinit var artNode : Node
+
     private var isExists = false
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -58,87 +61,133 @@ class SceneForm : AppCompatActivity(), FragmentOnAttachListener,
         }
 
 
-        loadModels()
+        buildModel(300, 460)
 
     }
 
-    private fun loadModels() {
+    private fun changePlaneRendererTexture() {
+        // Build texture sampler
+        val sampler: Texture.Sampler = Texture.Sampler.builder()
+            .setMinFilter(Texture.Sampler.MinFilter.LINEAR)
+            .setMagFilter(Texture.Sampler.MagFilter.LINEAR)
+            .setWrapMode(Texture.Sampler.WrapMode.REPEAT).build()
 
-        val v: View = layoutInflater.inflate(R.layout.layout_art, null)
-        val imageView = v.findViewById<View>(R.id.art) as ImageView
+        // Build texture with sampler
+
+        val trigrid: CompletableFuture<Texture> = Texture.builder()
+            .setSource(this, R.drawable.red_trigrid)
+            .setSampler(sampler).build()
+
+        // Set plane texture
+        arFragment.arSceneView
+            .planeRenderer
+            .material
+            .thenAcceptBoth(trigrid) { material, texture ->
+                material.setTexture(
+                    PlaneRenderer.MATERIAL_TEXTURE,
+                    texture
+                )
+            }
+    }
+
+
+    private fun buildModel(width : Int, height : Int) {
+
+        val view: View = layoutInflater.inflate(R.layout.layout_art, null)
+        val imageView = view.findViewById<View>(R.id.art) as ImageView
+
 
         Picasso.get()
             .load("https://images.all-free-download.com/images/graphiclarge/mona_lisa_painting_art_214707.jpg")
             .into(imageView, object : Callback {
                 override fun onSuccess() {
-                    buildModel(v)
-                    Toast.makeText(applicationContext, "Image Download success", Toast.LENGTH_SHORT)
-                        .show()
+
+                    view.layoutParams = ViewGroup.LayoutParams(width, height)
+
+                    ViewRenderable.builder()
+                        .setView(this@SceneForm, view)
+                        .build()
+                        .thenAccept { renderable: ViewRenderable ->
+                            artRenderable = renderable
+                        }
                 }
 
                 override fun onError(e: Exception?) {
-                    Toast.makeText(
-                        applicationContext,
-                        "${e!!.localizedMessage}",
-                        Toast.LENGTH_SHORT
-                    ).show()
 
                 }
 
             })
 
-
-    }
-
-    private fun buildModel(v: View) {
-
-        v.requestLayout()
-        ViewRenderable.builder()
-            .setView(this, R.layout.layout_art)
-            .build()
-            .thenAccept { renderable: ViewRenderable ->
-                viewRenderable = renderable
-            }
     }
 
 
     override fun onAttachFragment(fragmentManager: FragmentManager, fragment: Fragment) {
+        //1st
         if (fragment.id == R.id.arFragment) {
             arFragment = fragment as ArFragment
             arFragment.setOnSessionConfigurationListener(this)
             arFragment.setOnViewCreatedListener(this)
             arFragment.setOnTapArPlaneListener(this)
+
+
         }
 
     }
 
     override fun onTapPlane(hitResult: HitResult?, plane: Plane?, motionEvent: MotionEvent?) {
-        if (viewRenderable == null) {
-            Toast.makeText(this, "Loading...", Toast.LENGTH_SHORT).show()
+        if (artRenderable == null) {
+            Toast.makeText(this, "Model is Null...", Toast.LENGTH_SHORT).show()
             return
         }
 
 
-        
+        setModelOnPlane(hitResult, plane, motionEvent)
+    }
+
+    private fun setModelOnPlane(hitResult: HitResult?, plane: Plane?, motionEvent: MotionEvent?) {
+
         if (!isExists) {
+
+            //To hide plane dots
+//            arFragment.arSceneView.planeRenderer.isVisible = false
+//            changePlaneRendererTexture()
+
             // Create the Anchor.
-            val session = arFragment.arSceneView.session
             anchor = hitResult!!.createAnchor()
             anchorNode = AnchorNode(anchor)
             anchorNode.setParent(arFragment.arSceneView.scene)
 
+            //to turn off shadows
+            artRenderable?.isShadowReceiver = false
+            artRenderable?.isShadowCaster = false
 
-            // Create the transformable model and add it to the anchor.
-            val painting = TransformableNode(arFragment.transformationSystem)
-            painting.renderable = viewRenderable
 
+            artNode = Node()
+            artNode.renderable = artRenderable
+            anchorNode.addChild(artNode)
 
-            anchorNode.addChild(painting)
+            //to make the art visible correctly on Vertical wall
+            if (plane!!.type == Plane.Type.VERTICAL) {
+                artNode.setLookDirection(Vector3.forward())
+            }
             isExists = true
         }
+        else
+        {
+            anchorNode.removeChild(artNode)
+            isExists = false
 
+            val widthArray = arrayListOf(150,200,300,400)
+
+            val width = widthArray.random()
+
+            buildModel(width, width +100)
+            setModelOnPlane(hitResult, plane, motionEvent)
+
+        }
 
     }
+
 
     override fun onSessionConfiguration(session: Session?, config: Config?) {
         if (session!!.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
@@ -161,9 +210,8 @@ class SceneForm : AppCompatActivity(), FragmentOnAttachListener,
         }
 
         // Fine adjust the maximum frame rate
-
-        // Fine adjust the maximum frame rate
         arSceneView.setFrameRateFactor(SceneView.FrameRate.FULL)
+
 
     }
 }

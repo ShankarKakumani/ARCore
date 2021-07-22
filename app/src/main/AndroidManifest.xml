@@ -3,11 +3,12 @@
     package="com.shankar.tgp_arcore">
 
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.INTERNET" />
     <!--
  Limits app visibility in the Google Play Store to ARCore supported devices
          (https://developers.google.com/ar/devices).
     -->
+    
     <uses-feature
         android:name="android.hardware.camera.ar"
         android:required="true" />
@@ -23,12 +24,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TGPARCore">
 
-        <activity android:name=".activity.Navigation"
+
+        <activity
+            android:name=".activity.FilamentActivity"
+            android:screenOrientation= "fullSensor"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"/>
+
+
+        <activity
+            android:name=".activity.Navigation"
             android:configChanges="orientation|screenSize"
             android:exported="true"
             android:screenOrientation="locked"
-            android:theme="@style/Theme.AppCompat.NoActionBar"
-            >
+            android:theme="@style/Theme.AppCompat.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -41,21 +49,21 @@
             android:configChanges="orientation|screenSize"
             android:exported="true"
             android:screenOrientation="locked"
-            android:theme="@style/Theme.AppCompat.NoActionBar">
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
 
 
-        </activity>
-        <activity android:name=".activity.TwoD" />
         <activity
             android:name=".activity.MainActivity"
             android:configChanges="orientation|screenSize"
             android:exported="true"
             android:screenOrientation="locked"
-            android:theme="@style/Theme.AppCompat.NoActionBar"/>
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
 
         <meta-data
             android:name="com.google.ar.core"
             android:value="required" />
+
+
     </application>
 
 </manifest>

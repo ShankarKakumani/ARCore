@@ -8,6 +8,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
         >
 
         <Button
@@ -19,6 +20,19 @@
             android:onClick="onItemClick"
             android:layout_margin="2dp"
             />
+
+
+        <Button
+            android:id="@+id/ar_core_two"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Filament"
+            android:onClick="onItemClick"
+            android:layout_margin="2dp"
+            />
+
+
         <Button
             android:id="@+id/ar_core"
             android:layout_width="wrap_content"
@@ -29,15 +43,6 @@
             android:layout_margin="2dp"
             />
 
-        <Button
-            android:id="@+id/ar_core_two"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="AC2"
-            android:onClick="onItemClick"
-            android:layout_margin="2dp"
-            />
     </LinearLayout>
 
 

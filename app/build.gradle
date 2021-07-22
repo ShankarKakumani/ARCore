@@ -55,8 +55,18 @@ dependencies {
     implementation 'de.javagl:obj:0.2.1'
 
 
+    //SceneForm
     implementation("com.gorisse.thomas.sceneform:sceneform:1.19.5")
-    implementation 'com.squareup.picasso:picasso:2.71828'
 
+    //Picasso
+    implementation 'com.squareup.picasso:picasso:2.71828'
+    
+    //Filament
+    implementation 'com.google.android.filament:filament-android:1.10.7'
+    implementation 'com.google.android.filament:filament-utils-android:1.10.7'
+    implementation 'com.google.android.filament:gltfio-android:1.10.7'
+
+    //coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0'
 
 }
