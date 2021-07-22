@@ -3,11 +3,10 @@ package com.shankar.tgp_arcore.activity
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.transition.Scene
 import android.view.View
 import com.shankar.tgp_arcore.R
 
-class Navigation : AppCompatActivity() {
+class NavigationActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_navigation)
@@ -18,18 +17,14 @@ class Navigation : AppCompatActivity() {
 
         val intent = when(view.id) {
             R.id.scene_form -> {
-                Intent(this, SceneForm::class.java)
+                Intent(this, SceneFormActivity::class.java)
             }
             R.id.ar_core -> {
-                Intent(this, MainActivity::class.java)
+                Intent(this, GalleryActivity::class.java)
             }
 
-            R.id.ar_core_two -> {
-                Intent(this, FilamentActivity::class.java)
-
-            }
             else -> {
-                Intent(this, SceneForm::class.java)
+                Intent(this, SceneFormActivity::class.java)
             }
         }
 

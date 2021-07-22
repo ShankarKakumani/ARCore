@@ -20,6 +20,7 @@ import com.google.ar.sceneform.rendering.Texture
 import com.google.ar.sceneform.rendering.ViewRenderable
 import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.BaseArFragment
+import com.google.ar.sceneform.ux.TransformableNode
 import com.shankar.tgp_arcore.R
 import com.shankar.tgp_arcore.databinding.ActivitySceneFormBinding
 import com.squareup.picasso.Callback
@@ -27,7 +28,7 @@ import com.squareup.picasso.Picasso
 import java.util.concurrent.CompletableFuture
 
 
-class SceneForm : AppCompatActivity(), FragmentOnAttachListener,
+class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
     BaseArFragment.OnTapArPlaneListener,
     BaseArFragment.OnSessionConfigurationListener,
     ArFragment.OnViewCreatedListener {
@@ -39,7 +40,7 @@ class SceneForm : AppCompatActivity(), FragmentOnAttachListener,
 
     private lateinit var anchor: Anchor
     private lateinit var anchorNode: AnchorNode
-    private lateinit var artNode : Node
+    private lateinit var artNode : TransformableNode
 
     private var isExists = false
 
@@ -105,7 +106,7 @@ class SceneForm : AppCompatActivity(), FragmentOnAttachListener,
                     view.layoutParams = ViewGroup.LayoutParams(width, height)
 
                     ViewRenderable.builder()
-                        .setView(this@SceneForm, view)
+                        .setView(this@SceneFormActivity, view)
                         .build()
                         .thenAccept { renderable: ViewRenderable ->
                             artRenderable = renderable
@@ -162,9 +163,11 @@ class SceneForm : AppCompatActivity(), FragmentOnAttachListener,
             artRenderable?.isShadowCaster = false
 
 
-            artNode = Node()
+            artNode = TransformableNode(arFragment.transformationSystem)
             artNode.renderable = artRenderable
             anchorNode.addChild(artNode)
+
+            artNode.translationController.isEnabled = false
 
             //to make the art visible correctly on Vertical wall
             if (plane!!.type == Plane.Type.VERTICAL) {
@@ -181,7 +184,7 @@ class SceneForm : AppCompatActivity(), FragmentOnAttachListener,
 
             val width = widthArray.random()
 
-            buildModel(width, width +100)
+//            buildModel(width, width +100)
             setModelOnPlane(hitResult, plane, motionEvent)
 
         }
