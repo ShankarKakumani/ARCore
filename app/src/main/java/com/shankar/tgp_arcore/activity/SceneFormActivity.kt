@@ -1,23 +1,21 @@
 package com.shankar.tgp_arcore.activity
 
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Rect
 import android.net.Uri
 import android.os.*
-import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentOnAttachListener
 import androidx.lifecycle.MutableLiveData
 import com.google.android.filament.ColorGrading
+import com.google.android.material.snackbar.Snackbar
 import com.google.ar.core.*
 import com.google.ar.sceneform.*
 import com.google.ar.sceneform.math.Vector3
@@ -29,17 +27,15 @@ import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.BaseArFragment
 import com.google.ar.sceneform.ux.TransformableNode
 import com.google.gson.Gson
-import com.jraska.falcon.Falcon
 import com.shankar.tgp_arcore.R
 import com.shankar.tgp_arcore.data.GalleryModel
 import com.shankar.tgp_arcore.databinding.ActivitySceneFormBinding
 import com.squareup.picasso.Callback
 import com.squareup.picasso.Picasso
+import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -102,137 +98,102 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 //            val bitmap = takeScreenshot()
 //            saveBitmap(bitmap!!)
 
-            val screenshotFile = getScreenshotFile()
-
-            Falcon.takeScreenshot(this, screenshotFile)
-
-            val bitmap: Bitmap = Falcon.takeScreenshotBitmap(this)
-
-            val message = "Screenshot captured to " + screenshotFile!!.absolutePath
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-
-            val uri: Uri = Uri.fromFile(screenshotFile)
-            val scanFileIntent = Intent(
-                Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, uri
-            )
-            sendBroadcast(scanFileIntent)
+            takePhoto()
         }
     }
 
-    protected open fun getScreenshotFile(): File? {
-        val screenshotDirectory: File?
+
+
+    open fun generateFilename(): String {
+
+        //현재시간을 기준으로 파일 이름 생성
+        val date = SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(Date())
+        return Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_PICTURES
+        ).toString() + File.separator + "IM/" + date + "_screenshot.jpg"
+    }
+
+    @Throws(IOException::class)
+    open fun saveBitmapToDisk(bitmap: Bitmap, filename: String) {
+
+        //사용자의 갤러리에 IM 디렉토리 생성 및 Bitmap 을 JPEG 형식으로 갤러리에 저장
+        val out = File(filename)
+        if (!out.parentFile.exists()) {
+            out.parentFile.mkdirs()
+        }
         try {
-            screenshotDirectory = getScreenshotsDirectory(applicationContext)
-        } catch (e: IllegalAccessException) {
-            throw RuntimeException(e)
-        }
-        val dateFormat: DateFormat =
-            SimpleDateFormat("yyyy-MM-dd_HH-mm-ss.SSS", Locale.getDefault())
-        val screenshotName: String = dateFormat.format(Date()).toString() + ".png"
-        return File(screenshotDirectory, screenshotName)
-    }
-
-    @Throws(IllegalAccessException::class)
-    open fun getScreenshotsDirectory(context: Context): File? {
-        val dirName = "screenshots_" + context.getPackageName()
-        val rootDir: File? =
-            if (Environment.MEDIA_MOUNTED == Environment.getExternalStorageState()) {
-                context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-            } else {
-                context.getDir("screens", MODE_PRIVATE)
-            }
-
-        val directory = File(rootDir, dirName)
-        if (!directory.exists()) {
-            if (!directory.mkdirs()) {
-                throw IllegalAccessException("Unable to create screenshot directory " + directory.absolutePath)
-            }
-        }
-        return directory
-    }
-
-    open fun takeScreenshot(): Bitmap? {
-        val rootView = findViewById<View>(android.R.id.content).rootView
-        rootView.isDrawingCacheEnabled = true
-        return rootView.drawingCache
-    }
-
-    open fun saveBitmap(bitmap: Bitmap) {
-        val imagePath =
-            File(Environment.getExternalStorageDirectory().toString() + "/screenshot.png")
-        val fos: FileOutputStream
-        try {
-            fos = FileOutputStream(imagePath)
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
-            fos.flush()
-            fos.close()
-        } catch (e: FileNotFoundException) {
-            Log.e("GREC", e.message, e)
-        } catch (e: IOException) {
-            Log.e("GREC", e.message, e)
-        }
-    }    // for api level 28
-    private fun getScreenShotFromView(view: View, activity: Activity, callback: (Bitmap) -> Unit) {
-        activity.window?.let { window ->
-            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-            val locationOfViewInWindow = IntArray(2)
-            view.getLocationInWindow(locationOfViewInWindow)
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    PixelCopy.request(
-                        window,
-                        Rect(
-                            locationOfViewInWindow[0],
-                            locationOfViewInWindow[1],
-                            locationOfViewInWindow[0] + view.width,
-                            locationOfViewInWindow[1] + view.height
-                        ), bitmap, { copyResult ->
-                            if (copyResult == PixelCopy.SUCCESS) {
-                                callback(bitmap)
-                            } else {
-
-                            }
-                            // possible to handle other result codes ...
-                        },
-                        Handler()
-                    )
+            FileOutputStream(filename).use { outputStream ->
+                ByteArrayOutputStream().use { outputData ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputData)
+                    outputData.writeTo(outputStream)
+                    outputStream.flush()
+                    outputStream.close()
                 }
-            } catch (e: IllegalArgumentException) {
-                // PixelCopy may throw IllegalArgumentException, make sure to handle it
-                e.printStackTrace()
             }
+        } catch (ex: IOException) {
+            throw IOException("Failed to save bitmap to disk", ex)
         }
     }
 
-//    private fun takePhoto() {
-//        val bitmap = Bitmap.createBitmap(
-//            this.arFragment.arSceneView.width,
-//            this.arFragment.arSceneView.height,
-//            Bitmap.Config.ARGB_8888
-//        )
-//        PixelCopy.request(
-//            this.arFragment.arSceneView, bitmap, { result ->
-//                when (result) {
-//                    PixelCopy.SUCCESS -> {
-//                        applicationContext?.createExternalFile(
-//                            environment = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//                                Environment.DIRECTORY_SCREENSHOTS
-//                            } else {
-//                                Environment.DIRECTORY_PICTURES
-//                            }, extension = ".png"
-//                        )?.let { file ->
-//                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, file.outputStream())
-//                            Intents.view(this, file, "image/png")
-//                        }
-//                    }
-//                    else -> showToast("Screenshot failure: $result")
-//                }
-//            }, Handler(
-//                HandlerThread("screenshot")
-//                    .apply { start() }.looper
-//            )
-//        )
-//    }
+    open fun takePhoto() {
+        //PixelCopy 를 사용하여 카메라 화면과 object 를 bitmap 으로 생성
+        val filename = generateFilename()
+        val view = arFragment.arSceneView
+        val bitmap = Bitmap.createBitmap(
+            view.width, view.height,
+            Bitmap.Config.ARGB_8888
+        )
+        val handlerThread = HandlerThread("PixelCopier")
+        handlerThread.start()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            PixelCopy.request(view, bitmap, { copyResult ->
+                if (copyResult == PixelCopy.SUCCESS) {
+                    try {
+                        saveBitmapToDisk(bitmap, filename)
+
+                        //Media Scanning 실시
+                        val uri = Uri.parse("file://$filename")
+                        val i = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+                        i.data = uri
+                        sendBroadcast(i)
+                    } catch (e: IOException) {
+                        val toast = Toast.makeText(
+                            this, e.toString(),
+                            Toast.LENGTH_LONG
+                        )
+                        toast.show()
+                        return@request
+                    }
+                    val snackbar = Snackbar.make(
+                        findViewById(android.R.id.content),
+                        "스크린샷이 저장되었습니다.", Snackbar.LENGTH_LONG
+                    )
+                    snackbar.setAction("갤러리에서 보기") { v: View? ->
+                        //어플 내에서 저장한 스크린샷을 확인 가능
+                        val photoFile = File(filename)
+                        val photoURI = FileProvider.getUriForFile(
+                            this,
+                            this.packageName
+                                .toString() + ".com.shankar.tgp_arcore",
+                            photoFile
+                        )
+                        val intent = Intent(Intent.ACTION_VIEW, photoURI)
+                        intent.setDataAndType(photoURI, "image/*")
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        startActivity(intent)
+                    }
+                    snackbar.show()
+                } else {
+                    val toast = Toast.makeText(
+                        this,
+                        "스크린샷 저장 실패!: $copyResult", Toast.LENGTH_LONG
+                    )
+                    toast.show()
+                }
+                handlerThread.quitSafely()
+            }, Handler(handlerThread.looper))
+        }
+    }
 
     private fun showSettingsDialog() {
         val dialogBuilder: AlertDialog.Builder = AlertDialog.Builder(this)
