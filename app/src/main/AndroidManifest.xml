@@ -4,6 +4,9 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
     <!--
  Limits app visibility in the Google Play Store to ARCore supported devices
          (https://developers.google.com/ar/devices).
@@ -22,14 +25,14 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TGPARCore">
-        <activity android:name=".activity.GalleryActivity"
+        <activity android:name=".activity.NavigationActivity"
             android:configChanges="orientation|screenSize"
 
             android:theme="@style/Theme.AppCompat.NoActionBar"
             />
 
         <activity
-            android:name=".activity.NavigationActivity"
+            android:name=".activity.GalleryActivity"
             android:configChanges="orientation|screenSize"
             android:exported="true"
             android:screenOrientation="locked"
@@ -50,6 +53,17 @@
         <meta-data
             android:name="com.google.ar.core"
             android:value="required" />
+
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.shankar.tgp_arcore"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/paths"/>
+        </provider>
     </application>
 
 </manifest>

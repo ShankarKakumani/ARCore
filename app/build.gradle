@@ -18,6 +18,10 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    android {
+        ndkVersion '22.1.7171670'
+    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -60,7 +64,7 @@ dependencies {
 
     //Picasso
     implementation 'com.squareup.picasso:picasso:2.71828'
-    
+
     //Filament
     implementation 'com.google.android.filament:filament-android:1.10.7'
     implementation 'com.google.android.filament:filament-utils-android:1.10.7'
@@ -68,5 +72,14 @@ dependencies {
 
     //coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.0'
+
+
+    //ViewModel
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.3.1'
+//    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.3.1'
+//    implementation 'android.arch.lifecycle:extensions:1.1.1'
+
+    implementation 'com.google.code.gson:gson:2.8.7'
+    implementation 'de.hdodenhof:circleimageview:3.1.0'
 
 }

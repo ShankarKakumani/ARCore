@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">TGP-ARCore</string>
+    <string name="dots_on">Dots : ON</string>
+    <string name="dots_off">Dots : OFF</string>
 </resources>
