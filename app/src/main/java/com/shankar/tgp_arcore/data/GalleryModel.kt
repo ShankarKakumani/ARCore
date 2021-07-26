@@ -6,6 +6,6 @@ data class GalleryModel(
     val imageUrl: String = "",
     val width: Int = 0,
     val height: Int = 0,
-    val frameColor: Int = R.color.white,
+    var frameColor: Int = R.color.white,
     val title: String = ""
 )

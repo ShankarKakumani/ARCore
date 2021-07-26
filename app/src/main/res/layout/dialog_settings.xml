@@ -30,6 +30,28 @@
         android:textColor="@color/black"
         />
 
+    <CheckBox
+        android:id="@+id/checkbox_scale"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Scale Controller"
+        android:checked="false"
+        android:buttonTint="@color/black"
+        android:textColor="@color/black"
+        />
+
+
+    <CheckBox
+        android:id="@+id/checkbox_draggable"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Translation Controller"
+        android:checked="false"
+        android:buttonTint="@color/black"
+        android:textColor="@color/black"
+        />
+
+
     <Button
         android:id="@+id/dialog_save"
         android:layout_width="wrap_content"

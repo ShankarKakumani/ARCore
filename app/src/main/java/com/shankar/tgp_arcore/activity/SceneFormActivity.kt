@@ -59,10 +59,18 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
     private lateinit var anchorNode: AnchorNode
     private lateinit var artNode: TransformableNode
 
+    private lateinit var hitResult: HitResult
+    private lateinit var plane: Plane
+    private lateinit var motionEvent: MotionEvent
+
+    private lateinit var galleryModel: GalleryModel
+
     private val onChosen = MutableLiveData(false)
     private var isExists = false
     private val isDotsVisible = MutableLiveData(true)
     private val isCameraEnabled = MutableLiveData(false)
+    private val isScalable = MutableLiveData(false)
+    private val isDraggable = MutableLiveData(false)
     val gson = Gson()
 
     lateinit var alertDialog: AlertDialog
@@ -92,7 +100,6 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
             takePhoto()
         }
     }
-
 
     private fun takePhoto() {
         val filename = generateFilename()
@@ -192,15 +199,27 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
         val saveButton = dialogView.findViewById<Button>(R.id.dialog_save)
         val checkBoxDots = dialogView.findViewById<CheckBox>(R.id.checkbox_dots)
         val checkBoxCamera = dialogView.findViewById<CheckBox>(R.id.checkbox_camera)
+        val checkBoxDraggable = dialogView.findViewById<CheckBox>(R.id.checkbox_draggable)
+        val checkBoxScalable = dialogView.findViewById<CheckBox>(R.id.checkbox_scale)
 
 
         checkBoxCamera!!.isChecked = isCameraEnabled.value!!
         checkBoxDots!!.isChecked = isDotsVisible.value!!
+        checkBoxDraggable!!.isChecked = isDraggable.value!!
+        checkBoxScalable!!.isChecked = isScalable.value!!
+
 
         saveButton?.setOnClickListener {
             isDotsVisible.postValue(checkBoxDots.isChecked)
             isCameraEnabled.postValue(checkBoxCamera.isChecked)
+            isDraggable.postValue(checkBoxDraggable.isChecked)
+            isScalable.postValue(checkBoxScalable.isChecked)
+
+            galleryModel.frameColor = R.color.red
+            buildModel(galleryModel)
+            setModelOnPlane(hitResult, plane, motionEvent)
             alertDialog.dismiss()
+
         }
 
 
@@ -214,7 +233,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
         if (!jsonModel.isNullOrBlank()) {
 
-            val galleryModel: GalleryModel = gson.fromJson(jsonModel, GalleryModel::class.java)
+             galleryModel = gson.fromJson(jsonModel, GalleryModel::class.java)
 
             buildModel(galleryModel)
         }
@@ -229,17 +248,32 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
             }
         })
 
-        isDotsVisible.observe(this, {
-            if (onChosen.value!!) {
-                arFragment.arSceneView.planeRenderer.isVisible = it
-            }
-        })
+
 
         isCameraEnabled.observe(this, {
             if (it) {
                 binding.arPhotoButton.visibility = View.VISIBLE
             } else {
                 binding.arPhotoButton.visibility = View.GONE
+            }
+        })
+    }
+
+    private fun arObservables() {
+
+        isDotsVisible.observe(this, {
+            arFragment.arSceneView.planeRenderer.isVisible = it
+        })
+
+        isScalable.observe(this, {
+            if (isExists) {
+                artNode.scaleController.isEnabled = it
+            }
+        })
+
+        isDraggable.observe(this, {
+            if (isExists) {
+                artNode.translationController.isEnabled = it
             }
         })
     }
@@ -366,9 +400,6 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
             return
         }
 
-
-
-
         setModelOnPlane(hitResult, plane, motionEvent)
     }
 
@@ -389,19 +420,24 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
             artRenderable.value?.isShadowReceiver = false
             artRenderable.value?.isShadowCaster = false
 
-
             artNode = TransformableNode(arFragment.transformationSystem)
             artNode.renderable = artRenderable.value
             anchorNode.addChild(artNode)
 
-            artNode.translationController.isEnabled = false
-            artNode.scaleController.isEnabled = false
+            artNode.scaleController.isEnabled = isScalable.value!!
+            artNode.translationController.isEnabled = isDraggable.value!!
+
 
             //to make the art visible correctly on Vertical wall
             if (plane!!.type == Plane.Type.VERTICAL) {
                 artNode.setLookDirection(Vector3.forward())
             }
+
+            this.hitResult = hitResult
+            this.plane = plane
+            this.motionEvent = motionEvent!!
             isExists = true
+
         } else {
             anchorNode.removeChild(artNode)
             isExists = false
@@ -419,9 +455,13 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
 
     override fun onSessionConfiguration(session: Session?, config: Config?) {
+        //3rd
         if (session!!.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
             config!!.depthMode = Config.DepthMode.AUTOMATIC
         }
+
+        arObservables()
+
     }
 
     override fun onViewCreated(arFragment: ArFragment?, arSceneView: ArSceneView?) {
@@ -430,6 +470,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
         // because with other tone-mapping operators except LINEAR
         // the inverseTonemapSRGB function in the materials can produce incorrect results.
         // The LINEAR tone-mapping cannot be used together with the inverseTonemapSRGB function.
+        //2nd
         val renderer = arSceneView!!.renderer
 
         if (renderer != null) {
