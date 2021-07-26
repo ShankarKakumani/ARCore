@@ -1,23 +1,20 @@
 package com.shankar.tgp_arcore.activity
 
-import android.content.Intent
+import android.app.Activity
 import android.graphics.Bitmap
-import android.os.Bundle
-import android.os.Environment
-import android.os.Handler
-import android.os.HandlerThread
+import android.graphics.Rect
+import android.os.*
+import android.util.Log
 import android.view.*
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentOnAttachListener
 import androidx.lifecycle.MutableLiveData
 import com.google.android.filament.ColorGrading
-import com.google.android.material.snackbar.Snackbar
 import com.google.ar.core.*
 import com.google.ar.sceneform.*
 import com.google.ar.sceneform.math.Vector3
@@ -34,11 +31,10 @@ import com.shankar.tgp_arcore.data.GalleryModel
 import com.shankar.tgp_arcore.databinding.ActivitySceneFormBinding
 import com.squareup.picasso.Callback
 import com.squareup.picasso.Picasso
-import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
@@ -56,7 +52,8 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
     private lateinit var anchor: Anchor
     private lateinit var anchorNode: AnchorNode
-    private lateinit var artNode: TransformableNode
+    private lateinit var artTransformableNode: TransformableNode
+    private lateinit var artNode: Node
 
     private lateinit var hitResult: HitResult
     private lateinit var plane: Plane
@@ -67,7 +64,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
     private val onChosen = MutableLiveData(false)
     private var isExists = false
     private val isDotsVisible = MutableLiveData(true)
-    private val isCameraEnabled = MutableLiveData(false)
+    private val isCameraEnabled = MutableLiveData(true)
     private val isScalable = MutableLiveData(false)
     private val isDraggable = MutableLiveData(false)
     val gson = Gson()
@@ -96,93 +93,93 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
 
         binding.arPhotoButton.setOnClickListener {
-            takePhoto()
+            val bitmap = takeScreenshot()
+            saveBitmap(bitmap!!)
         }
     }
 
-    private fun takePhoto() {
-        val filename = generateFilename()
-        val view: ArSceneView = arFragment.arSceneView
-
-        // Create a bitmap the size of the scene view.
-        val bitmap = Bitmap.createBitmap(
-            view.width, view.height,
-            Bitmap.Config.ARGB_8888
-        )
-
-        // Create a handler thread to offload the processing of the image.
-        val handlerThread = HandlerThread("PixelCopier")
-        handlerThread.start()
-        // Make the request to copy.
-        PixelCopy.request(view, bitmap, { copyResult: Int ->
-            if (copyResult == PixelCopy.SUCCESS) {
-                try {
-                    saveBitmapToDisk(bitmap, filename)
-                } catch (e: IOException) {
-                    val toast = Toast.makeText(
-                        this, e.toString(),
-                        Toast.LENGTH_LONG
-                    )
-                    toast.show()
-                    return@request
-                }
-                val snackbar = Snackbar.make(
-                    findViewById(android.R.id.content),
-                    "Photo saved", Snackbar.LENGTH_LONG
-                )
-                snackbar.setAction(
-                    "Open in Photos"
-                ) { v: View? ->
-                    val photoFile = File(filename)
-                    val photoURI = FileProvider.getUriForFile(
-                        this,
-                        this.packageName.toString() + ".ar.codelab.name.provider",
-                        photoFile
-                    )
-                    val intent = Intent(Intent.ACTION_VIEW, photoURI)
-                    intent.setDataAndType(photoURI, "image/*")
-                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    startActivity(intent)
-                }
-                snackbar.show()
-            } else {
-                val toast = Toast.makeText(
-                    this,
-                    "Failed to copyPixels: $copyResult", Toast.LENGTH_LONG
-                )
-                toast.show()
-            }
-            handlerThread.quitSafely()
-        }, Handler(handlerThread.looper))
+    open fun takeScreenshot(): Bitmap? {
+        val rootView = findViewById<View>(android.R.id.content).rootView
+        rootView.isDrawingCacheEnabled = true
+        return rootView.drawingCache
     }
 
-
-    private fun generateFilename(): String {
-        val date = SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(Date())
-        return Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_PICTURES
-        ).toString() + File.separator + "Sceneform/" + date + "_screenshot.jpg"
-    }
-
-    @Throws(IOException::class)
-    private fun saveBitmapToDisk(bitmap: Bitmap, filename: String) {
-        val out = File(filename)
-        if (!out.parentFile.exists()) {
-            out.parentFile.mkdirs()
-        }
+    open fun saveBitmap(bitmap: Bitmap) {
+        val imagePath =
+            File(Environment.getExternalStorageDirectory().toString() + "/screenshot.png")
+        val fos: FileOutputStream
         try {
-            FileOutputStream(filename).use { outputStream ->
-                ByteArrayOutputStream().use { outputData ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputData)
-                    outputData.writeTo(outputStream)
-                    outputStream.flush()
-                    outputStream.close()
+            fos = FileOutputStream(imagePath)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+            fos.flush()
+            fos.close()
+        } catch (e: FileNotFoundException) {
+            Log.e("GREC", e.message, e)
+        } catch (e: IOException) {
+            Log.e("GREC", e.message, e)
+        }
+    }    // for api level 28
+    private fun getScreenShotFromView(view: View, activity: Activity, callback: (Bitmap) -> Unit) {
+        activity.window?.let { window ->
+            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+            val locationOfViewInWindow = IntArray(2)
+            view.getLocationInWindow(locationOfViewInWindow)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    PixelCopy.request(
+                        window,
+                        Rect(
+                            locationOfViewInWindow[0],
+                            locationOfViewInWindow[1],
+                            locationOfViewInWindow[0] + view.width,
+                            locationOfViewInWindow[1] + view.height
+                        ), bitmap, { copyResult ->
+                            if (copyResult == PixelCopy.SUCCESS) {
+                                callback(bitmap)
+                            } else {
+
+                            }
+                            // possible to handle other result codes ...
+                        },
+                        Handler()
+                    )
                 }
+            } catch (e: IllegalArgumentException) {
+                // PixelCopy may throw IllegalArgumentException, make sure to handle it
+                e.printStackTrace()
             }
-        } catch (ex: IOException) {
-            throw IOException("Failed to save bitmap to disk", ex)
         }
     }
+
+//    private fun takePhoto() {
+//        val bitmap = Bitmap.createBitmap(
+//            this.arFragment.arSceneView.width,
+//            this.arFragment.arSceneView.height,
+//            Bitmap.Config.ARGB_8888
+//        )
+//        PixelCopy.request(
+//            this.arFragment.arSceneView, bitmap, { result ->
+//                when (result) {
+//                    PixelCopy.SUCCESS -> {
+//                        applicationContext?.createExternalFile(
+//                            environment = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//                                Environment.DIRECTORY_SCREENSHOTS
+//                            } else {
+//                                Environment.DIRECTORY_PICTURES
+//                            }, extension = ".png"
+//                        )?.let { file ->
+//                            bitmap.compress(Bitmap.CompressFormat.PNG, 100, file.outputStream())
+//                            Intents.view(this, file, "image/png")
+//                        }
+//                    }
+//                    else -> showToast("Screenshot failure: $result")
+//                }
+//            }, Handler(
+//                HandlerThread("screenshot")
+//                    .apply { start() }.looper
+//            )
+//        )
+//    }
 
     private fun showSettingsDialog() {
         val dialogBuilder: AlertDialog.Builder = AlertDialog.Builder(this)
@@ -232,7 +229,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
         if (!jsonModel.isNullOrBlank()) {
 
-             galleryModel = gson.fromJson(jsonModel, GalleryModel::class.java)
+            galleryModel = gson.fromJson(jsonModel, GalleryModel::class.java)
 
             buildModel(galleryModel)
         }
@@ -266,13 +263,13 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
         isScalable.observe(this, {
             if (isExists) {
-                artNode.scaleController.isEnabled = it
+                artTransformableNode.scaleController.isEnabled = it
             }
         })
 
         isDraggable.observe(this, {
             if (isExists) {
-                artNode.translationController.isEnabled = it
+                artTransformableNode.translationController.isEnabled = it
             }
         })
     }
@@ -395,7 +392,8 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
     override fun onTapPlane(hitResult: HitResult?, plane: Plane?, motionEvent: MotionEvent?) {
         if (artRenderable.value == null) {
-            Toast.makeText(this, "Model is not...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Model is not build yet...", Toast.LENGTH_SHORT).show()
+            buildModel(galleryModel)
             return
         }
 
@@ -415,21 +413,25 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
             anchorNode = AnchorNode(anchor)
             anchorNode.setParent(arFragment.arSceneView.scene)
 
+
             //to turn off shadows
             artRenderable.value?.isShadowReceiver = false
             artRenderable.value?.isShadowCaster = false
 
-            artNode = TransformableNode(arFragment.transformationSystem)
+            artNode = Node()
             artNode.renderable = artRenderable.value
+
+            artTransformableNode = TransformableNode(arFragment.transformationSystem)
+            artTransformableNode.renderable = artRenderable.value
+
             anchorNode.addChild(artNode)
 
-            artNode.scaleController.isEnabled = isScalable.value!!
-            artNode.translationController.isEnabled = isDraggable.value!!
-
+            artTransformableNode.scaleController.isEnabled = isScalable.value!!
+            artTransformableNode.translationController.isEnabled = isDraggable.value!!
 
             //to make the art visible correctly on Vertical wall
             if (plane!!.type == Plane.Type.VERTICAL) {
-//                artNode.setLookDirection(Vector3.forward())
+//                anchorNode.setLookDirection(Vector3.forward())
                 val anchorUp = anchorNode.up
                 artNode.setLookDirection(Vector3.up(), anchorUp)
             }
@@ -443,10 +445,10 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
             anchorNode.removeChild(artNode)
             isExists = false
 
+
             val widthArray = arrayListOf(150, 200, 300, 400)
 
             val width = widthArray.random()
-
 //            buildModel(width, width +100)
             setModelOnPlane(hitResult, plane, motionEvent)
 
