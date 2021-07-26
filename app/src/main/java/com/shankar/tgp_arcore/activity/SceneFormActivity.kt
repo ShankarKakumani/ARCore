@@ -1,8 +1,11 @@
 package com.shankar.tgp_arcore.activity
 
 import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
+import android.net.Uri
 import android.os.*
 import android.util.Log
 import android.view.*
@@ -26,6 +29,7 @@ import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.BaseArFragment
 import com.google.ar.sceneform.ux.TransformableNode
 import com.google.gson.Gson
+import com.jraska.falcon.Falcon
 import com.shankar.tgp_arcore.R
 import com.shankar.tgp_arcore.data.GalleryModel
 import com.shankar.tgp_arcore.databinding.ActivitySceneFormBinding
@@ -35,6 +39,8 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
+import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
@@ -93,9 +99,56 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
 
         binding.arPhotoButton.setOnClickListener {
-            val bitmap = takeScreenshot()
-            saveBitmap(bitmap!!)
+//            val bitmap = takeScreenshot()
+//            saveBitmap(bitmap!!)
+
+            val screenshotFile = getScreenshotFile()
+
+            Falcon.takeScreenshot(this, screenshotFile)
+
+            val bitmap: Bitmap = Falcon.takeScreenshotBitmap(this)
+
+            val message = "Screenshot captured to " + screenshotFile!!.absolutePath
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+
+            val uri: Uri = Uri.fromFile(screenshotFile)
+            val scanFileIntent = Intent(
+                Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, uri
+            )
+            sendBroadcast(scanFileIntent)
         }
+    }
+
+    protected open fun getScreenshotFile(): File? {
+        val screenshotDirectory: File?
+        try {
+            screenshotDirectory = getScreenshotsDirectory(applicationContext)
+        } catch (e: IllegalAccessException) {
+            throw RuntimeException(e)
+        }
+        val dateFormat: DateFormat =
+            SimpleDateFormat("yyyy-MM-dd_HH-mm-ss.SSS", Locale.getDefault())
+        val screenshotName: String = dateFormat.format(Date()).toString() + ".png"
+        return File(screenshotDirectory, screenshotName)
+    }
+
+    @Throws(IllegalAccessException::class)
+    open fun getScreenshotsDirectory(context: Context): File? {
+        val dirName = "screenshots_" + context.getPackageName()
+        val rootDir: File? =
+            if (Environment.MEDIA_MOUNTED == Environment.getExternalStorageState()) {
+                context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+            } else {
+                context.getDir("screens", MODE_PRIVATE)
+            }
+
+        val directory = File(rootDir, dirName)
+        if (!directory.exists()) {
+            if (!directory.mkdirs()) {
+                throw IllegalAccessException("Unable to create screenshot directory " + directory.absolutePath)
+            }
+        }
+        return directory
     }
 
     open fun takeScreenshot(): Bitmap? {
