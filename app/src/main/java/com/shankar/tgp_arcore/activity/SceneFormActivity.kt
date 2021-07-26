@@ -2,7 +2,6 @@ package com.shankar.tgp_arcore.activity
 
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
@@ -215,9 +214,9 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
             isDraggable.postValue(checkBoxDraggable.isChecked)
             isScalable.postValue(checkBoxScalable.isChecked)
 
-            galleryModel.frameColor = R.color.red
-            buildModel(galleryModel)
-            setModelOnPlane(hitResult, plane, motionEvent)
+//            galleryModel.frameColor = R.color.red
+//            buildModel(galleryModel)
+//            setModelOnPlane(hitResult, plane, motionEvent)
             alertDialog.dismiss()
 
         }
@@ -430,7 +429,9 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
             //to make the art visible correctly on Vertical wall
             if (plane!!.type == Plane.Type.VERTICAL) {
-                artNode.setLookDirection(Vector3.forward())
+//                artNode.setLookDirection(Vector3.forward())
+                val anchorUp = anchorNode.up
+                artNode.setLookDirection(Vector3.up(), anchorUp)
             }
 
             this.hitResult = hitResult
