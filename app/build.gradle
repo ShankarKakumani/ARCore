@@ -69,6 +69,5 @@ dependencies {
     implementation 'de.hdodenhof:circleimageview:3.1.0'
 
     implementation 'com.github.Mika-89:Screenshot:master-SNAPSHOT'
-    implementation 'com.jraska:falcon:2.2.0'
 
 }

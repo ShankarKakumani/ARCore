@@ -27,6 +27,7 @@ import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.BaseArFragment
 import com.google.ar.sceneform.ux.TransformableNode
 import com.google.gson.Gson
+import com.nmd.screenshot.Screenshot
 import com.shankar.tgp_arcore.R
 import com.shankar.tgp_arcore.data.GalleryModel
 import com.shankar.tgp_arcore.databinding.ActivitySceneFormBinding
@@ -51,7 +52,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
     private var artRenderable = MutableLiveData<ViewRenderable>()
 
     private lateinit var binding: ActivitySceneFormBinding
-
+    private lateinit var screenshot: Screenshot
     private lateinit var anchor: Anchor
     private lateinit var anchorNode: AnchorNode
     private lateinit var artTransformableNode: TransformableNode
@@ -81,7 +82,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
         setContentView(binding.root)
         binding.lifecycleOwner = this
 
-
+        screenshot = Screenshot(this)
         handleIntent()
         observeLiveData()
         onChosen.postValue(true)
@@ -98,102 +99,10 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 //            val bitmap = takeScreenshot()
 //            saveBitmap(bitmap!!)
 
-            takePhoto()
+            screenshot.takeScreenshot()
         }
     }
 
-
-
-    open fun generateFilename(): String {
-
-        //현재시간을 기준으로 파일 이름 생성
-        val date = SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(Date())
-        return Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_PICTURES
-        ).toString() + File.separator + "IM/" + date + "_screenshot.jpg"
-    }
-
-    @Throws(IOException::class)
-    open fun saveBitmapToDisk(bitmap: Bitmap, filename: String) {
-
-        //사용자의 갤러리에 IM 디렉토리 생성 및 Bitmap 을 JPEG 형식으로 갤러리에 저장
-        val out = File(filename)
-        if (!out.parentFile.exists()) {
-            out.parentFile.mkdirs()
-        }
-        try {
-            FileOutputStream(filename).use { outputStream ->
-                ByteArrayOutputStream().use { outputData ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputData)
-                    outputData.writeTo(outputStream)
-                    outputStream.flush()
-                    outputStream.close()
-                }
-            }
-        } catch (ex: IOException) {
-            throw IOException("Failed to save bitmap to disk", ex)
-        }
-    }
-
-    open fun takePhoto() {
-        //PixelCopy 를 사용하여 카메라 화면과 object 를 bitmap 으로 생성
-        val filename = generateFilename()
-        val view = arFragment.arSceneView
-        val bitmap = Bitmap.createBitmap(
-            view.width, view.height,
-            Bitmap.Config.ARGB_8888
-        )
-        val handlerThread = HandlerThread("PixelCopier")
-        handlerThread.start()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            PixelCopy.request(view, bitmap, { copyResult ->
-                if (copyResult == PixelCopy.SUCCESS) {
-                    try {
-                        saveBitmapToDisk(bitmap, filename)
-
-                        //Media Scanning 실시
-                        val uri = Uri.parse("file://$filename")
-                        val i = Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
-                        i.data = uri
-                        sendBroadcast(i)
-                    } catch (e: IOException) {
-                        val toast = Toast.makeText(
-                            this, e.toString(),
-                            Toast.LENGTH_LONG
-                        )
-                        toast.show()
-                        return@request
-                    }
-                    val snackbar = Snackbar.make(
-                        findViewById(android.R.id.content),
-                        "스크린샷이 저장되었습니다.", Snackbar.LENGTH_LONG
-                    )
-                    snackbar.setAction("갤러리에서 보기") { v: View? ->
-                        //어플 내에서 저장한 스크린샷을 확인 가능
-                        val photoFile = File(filename)
-                        val photoURI = FileProvider.getUriForFile(
-                            this,
-                            this.packageName
-                                .toString() + ".com.shankar.tgp_arcore",
-                            photoFile
-                        )
-                        val intent = Intent(Intent.ACTION_VIEW, photoURI)
-                        intent.setDataAndType(photoURI, "image/*")
-                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        startActivity(intent)
-                    }
-                    snackbar.show()
-                } else {
-                    val toast = Toast.makeText(
-                        this,
-                        "스크린샷 저장 실패!: $copyResult", Toast.LENGTH_LONG
-                    )
-                    toast.show()
-                }
-                handlerThread.quitSafely()
-            }, Handler(handlerThread.looper))
-        }
-    }
 
     private fun showSettingsDialog() {
         val dialogBuilder: AlertDialog.Builder = AlertDialog.Builder(this)
