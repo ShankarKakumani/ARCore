@@ -99,6 +99,13 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 //            val bitmap = takeScreenshot()
 //            saveBitmap(bitmap!!)
 
+            screenshot.setCallback { success, filePath, bitmap ->
+                Toast.makeText(
+                    this@SceneFormActivity,
+                    filePath,
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
             screenshot.takeScreenshot()
         }
     }
