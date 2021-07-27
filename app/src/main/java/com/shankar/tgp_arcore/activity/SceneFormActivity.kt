@@ -31,6 +31,7 @@ import com.nmd.screenshot.Screenshot
 import com.shankar.tgp_arcore.R
 import com.shankar.tgp_arcore.data.GalleryModel
 import com.shankar.tgp_arcore.databinding.ActivitySceneFormBinding
+import com.shankar.tgp_arcore.util.PhotoSaver
 import com.squareup.picasso.Callback
 import com.squareup.picasso.Picasso
 import java.io.ByteArrayOutputStream
@@ -52,7 +53,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
     private var artRenderable = MutableLiveData<ViewRenderable>()
 
     private lateinit var binding: ActivitySceneFormBinding
-    private lateinit var screenshot: Screenshot
+    private lateinit var photoSaver: PhotoSaver
     private lateinit var anchor: Anchor
     private lateinit var anchorNode: AnchorNode
     private lateinit var artTransformableNode: TransformableNode
@@ -82,7 +83,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
         setContentView(binding.root)
         binding.lifecycleOwner = this
 
-        screenshot = Screenshot(this)
+        photoSaver = PhotoSaver(this)
         handleIntent()
         observeLiveData()
         onChosen.postValue(true)
@@ -99,14 +100,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 //            val bitmap = takeScreenshot()
 //            saveBitmap(bitmap!!)
 
-            screenshot.setCallback { success, filePath, bitmap ->
-                Toast.makeText(
-                    this@SceneFormActivity,
-                    filePath,
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            screenshot.takeScreenshot()
+            photoSaver.takePhoto(arFragment.arSceneView)
         }
     }
 
