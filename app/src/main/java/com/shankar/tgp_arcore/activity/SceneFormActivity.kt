@@ -60,6 +60,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
     private val isCameraEnabled = MutableLiveData(true)
     private val isScalable = MutableLiveData(false)
     private val isDraggable = MutableLiveData(false)
+    private val isRotatable = MutableLiveData(false)
     val gson = Gson()
 
     lateinit var alertDialog: AlertDialog
@@ -305,7 +306,7 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
     override fun onTapPlane(hitResult: HitResult?, plane: Plane?, motionEvent: MotionEvent?) {
         if (artRenderable.value == null) {
-            Toast.makeText(this, "Model is not build yet...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Model is not built...", Toast.LENGTH_SHORT).show()
             buildModel(galleryModel)
             return
         }
@@ -315,11 +316,14 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
     private fun setModelOnPlane(hitResult: HitResult?, plane: Plane?, motionEvent: MotionEvent?) {
 
-        if (!isExists) {
+        if (isExists) {
 
-            //To hide plane dots
-//            arFragment.arSceneView.planeRenderer.isVisible = false
-//            changePlaneRendererTexture()
+            anchorNode.removeChild(artNode)
+            isExists = false
+            setModelOnPlane(hitResult, plane, motionEvent)
+
+
+        } else {
 
             // Create the Anchor.
             anchor = hitResult!!.createAnchor()
@@ -341,30 +345,16 @@ open class SceneFormActivity : AppCompatActivity(), FragmentOnAttachListener,
 
             artTransformableNode.scaleController.isEnabled = isScalable.value!!
             artTransformableNode.translationController.isEnabled = isDraggable.value!!
+            artTransformableNode.rotationController.isEnabled = isRotatable.value!!
 
             //to make the art visible correctly on Vertical wall
-            if (plane!!.type == Plane.Type.VERTICAL) {
-//                anchorNode.setLookDirection(Vector3.forward())
-                val anchorUp = anchorNode.up
-                artNode.setLookDirection(Vector3.up(), anchorUp)
+            if (plane?.type == Plane.Type.VERTICAL) {
+                artNode.setLookDirection(Vector3.forward())
+//                val anchorUp = anchorNode.up
+//                artNode.setLookDirection(Vector3.up(), anchorUp)
             }
 
-            this.hitResult = hitResult
-            this.plane = plane
-            this.motionEvent = motionEvent!!
             isExists = true
-
-        } else {
-            anchorNode.removeChild(artNode)
-            isExists = false
-
-
-            val widthArray = arrayListOf(150, 200, 300, 400)
-
-            val width = widthArray.random()
-//            buildModel(width, width +100)
-            setModelOnPlane(hitResult, plane, motionEvent)
-
         }
 
     }

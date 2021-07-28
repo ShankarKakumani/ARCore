@@ -2,6 +2,7 @@ package com.shankar.tgp_arcore.util
 
 import android.app.Activity
 import android.content.ContentValues
+import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaScannerConnection
 import android.net.Uri
@@ -17,6 +18,7 @@ import com.google.ar.sceneform.ArSceneView
 import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
+
 
 class PhotoSaver(
     private val activity: Activity
@@ -65,6 +67,9 @@ class PhotoSaver(
 
         writeBitmapToJpeg(bmp, outputStream)
         notifyGalleryThatFileHasBeenAdded(filename)
+
+        bmp.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+        shareImage(bmp, "Art");
     }
 
     private fun notifyGalleryThatFileHasBeenAdded(filename: String) {
@@ -108,10 +113,29 @@ class PhotoSaver(
             // Prepare stream to be closed
             outputStream.flush()
             outputStream.close()
+
+            shareImage(bmp, "Art from TGP");
+
         } catch (e: IOException) {
             showBitmapWriteErrorMessage()
         }
     }
+    fun shareImage(bitmap: Bitmap?, text: String?) {
+        //bitmap is ur image and text is which is written in edtitext
+        //you will get the image from the path
+        val pathofBmp = MediaStore.Images.Media.insertImage(
+            activity.contentResolver,
+            bitmap, "title", null
+        )
+        val uri = Uri.parse(pathofBmp)
+        val shareIntent = Intent(Intent.ACTION_SEND)
+        shareIntent.type = "image/*"
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Star App")
+        shareIntent.putExtra(Intent.EXTRA_TEXT, text)
+        shareIntent.putExtra(Intent.EXTRA_STREAM, uri)
+        activity.startActivity(Intent.createChooser(shareIntent, "Share with"))
+    }
+
 
     private fun doesNotExist(file: File) = !file.parentFile.exists()
 
